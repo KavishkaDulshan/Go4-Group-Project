@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "384100770634",
+    "project_id": "gen-lang-client-01783580-36632",
+    "storage_bucket": "gen-lang-client-01783580-36632.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:384100770634:android:58c2765480965f12e1d7b3",
+        "android_client_info": {
+          "package_name": "com.go4app.go4"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "384100770634-jika41sqonvme14dlu31eptfrug80124.apps.googleusercontent.com",
+          "client_type": 3
+        },
+        {
+          "client_id": "642859857652-8grqto8t2mjlm8r3g98ig8relhk36ouj.apps.googleusercontent.com",
+          "client_type": 1
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7qwg236rAroYuvXNhOzMRFCnJKZA7Biw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "384100770634-jika41sqonvme14dlu31eptfrug80124.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "642859857652-8grqto8t2mjlm8r3g98ig8relhk36ouj.apps.googleusercontent.com",
+              "client_type": 1
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
