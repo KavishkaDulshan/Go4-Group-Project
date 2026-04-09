@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "go4-filesystem": {
+      "type": "stdio",
+      "command": "C:\\Program Files\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\LENOVO\\AppData\\Roaming\\npm\\node_modules\\@modelcontextprotocol\\server-filesystem\\dist\\index.js",
+        "d:\\Project\\MAD\\GO4\\go4-project"
+      ]
+    }
+  }
+}

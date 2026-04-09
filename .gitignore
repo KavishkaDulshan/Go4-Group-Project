@@ -1,0 +1,53 @@
+# ── Environment & secrets ─────────────────────────────────────────────────────
+backend/.env
+.env
+*.env.local
+
+# ── Node ──────────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+# (keep docker-compose.yml but not override files with secrets)
+docker-compose.override.yml
+
+# ── Uploads (runtime files, written by the container) ─────────────────────────
+backend/uploads/
+
+# ── Claude Code temp files ─────────────────────────────────────────────────────
+tmpclaude-*
+
+# ── Flutter ───────────────────────────────────────────────────────────────────
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/build/
+frontend/android/local.properties
+frontend/android/key.properties
+frontend/android/.gradle/
+frontend/ios/Pods/
+frontend/ios/.symlinks/
+frontend/*.iml
+
+# ── IDEs ──────────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/settings.json
+
+# ----------------------------------------------------------------------------
+# Temporary Files
+# ----------------------------------------------------------------------------
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Claude Code temporary files
+tmpclaude-*
+
+# ----------------------------------------------------------------------------
+# Business Data (Keep these locally only)
+# ----------------------------------------------------------------------------
+backups/
+exports/

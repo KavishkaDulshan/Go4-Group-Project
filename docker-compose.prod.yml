@@ -1,0 +1,24 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# docker-compose.prod.yml  —  Production deployment (Azure VM port 80)
+# Used by: GitHub Actions auto-deploy + manual deploy on VM
+# Run:  sudo docker compose -f docker-compose.prod.yml up -d --build
+# ──────────────────────────────────────────────────────────────────────────────
+services:
+  go4-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: go4-backend
+    restart: always
+    ports:
+      - "80:3000"
+    volumes:
+      - go4_uploads:/app/uploads
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
+
+volumes:
+  go4_uploads:
+    driver: local

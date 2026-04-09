@@ -1,0 +1,16 @@
+# Normalise all text files to LF in the repository (important for Docker/Linux targets).
+# Git will convert to the OS line ending on checkout.
+* text=auto eol=lf
+
+# Windows batch files must keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files — no line-ending conversion
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.ico  binary
+*.apk  binary
+*.keystore binary
+*.jks  binary
