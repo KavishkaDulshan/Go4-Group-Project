@@ -1,0 +1,42 @@
+name: Deploy Backend to Azure VM
+
+# This triggers the workflow when code is pushed to the 'main' branch.
+# It only runs if files inside the backend folder or the compose file are changed.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/deploy.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: SSH into Azure VM and Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AZURE_VM_IP }}
+          username: ${{ secrets.AZURE_VM_USERNAME }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          script: |
+            # 1. Navigate to the project directory on the VM
+            cd ~/GO4/Go4-Group-Project
+            
+            # 2. Discard any accidental local changes on the VM to prevent merge conflicts
+            git reset --hard
+            
+            # 3. Pull the latest code from the main branch
+            git pull origin main
+            
+            # 4. Rebuild the backend image with the new code
+            sudo docker compose build go4-backend
+            
+            # 5. Restart the container in the background
+            sudo docker compose up -d go4-backend
+            
+            # 6. Clean up old, unused Docker images to save disk space
+            sudo docker image prune -f
