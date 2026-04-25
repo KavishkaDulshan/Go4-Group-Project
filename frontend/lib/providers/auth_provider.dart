@@ -15,7 +15,7 @@ const _prefUserJson = 'pref_user_json';
 // so the backend can verify sign-ins via POST /api/v1/auth/google.
 // The value below comes from GOOGLE_CLIENT_ID in backend/.env.
 const _webClientId =
-    '642859857652-8grqto8t2mjlm8r3g98ig8relhk36ouj.apps.googleusercontent.com';
+    '384100770634-jika41sqonvme14dlu31eptfrug80124.apps.googleusercontent.com';
 
 final _googleSignIn = GoogleSignIn(
   scopes: ['email', 'profile'],
@@ -82,6 +82,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> signIn() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
+      // Force clear cache to prevent using an old token with the wrong audience
+      await _googleSignIn.signOut();
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         // User cancelled
@@ -106,7 +108,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await prefs.setString(_prefUserJson, jsonEncode(user.toJson()));
 
       state = AuthState(user: user, token: token);
-    } catch (e) {
+    } catch (e, stack) {
+      print('Google Sign-In Error: $e\n$stack');
       state = state.copyWith(isLoading: false, errorMessage: friendlyError(e));
     }
   }

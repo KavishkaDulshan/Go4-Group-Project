@@ -3,6 +3,7 @@
     <!-- LOCAL DEV (active): allow plain HTTP to localhost via USB adb reverse -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
     </domain-config>
     <!-- PRODUCTION: allow plain HTTP to the Azure VM (uncomment when switching back) -->
     <!-- <domain-config cleartextTrafficPermitted="true">
