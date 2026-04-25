@@ -294,22 +294,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         final lng = (p['lng'] as num?)?.toDouble();
         if (lat == null || lng == null) continue;
 
+        final placeName = p['name'] as String? ?? 'Store';
+        final placeAddress = p['address'] as String? ?? '';
         newMarkers.add(
           Marker(
             point: LatLng(lat, lng),
-            width: 42,
-            height: 42,
+            width: 150,
+            height: 72,
             child: Tooltip(
               message: [
-                p['name'] as String? ?? 'Store',
-                if ((p['address'] as String?)?.isNotEmpty ?? false)
-                  p['address'] as String,
+                placeName,
+                if (placeAddress.isNotEmpty) placeAddress,
               ].whereType<String>().join('\n'),
-              child: const Icon(
-                Icons.place,
-                color: Colors.red,
-                size: 34,
-              ),
+              child: _MapPlaceMarkerLabel(name: placeName),
             ),
           ),
         );
@@ -652,6 +649,53 @@ class _StoreCardState extends State<_StoreCard> {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _MapPlaceMarkerLabel extends StatelessWidget {
+  final String name;
+
+  const _MapPlaceMarkerLabel({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          constraints: const BoxConstraints(maxWidth: 140),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.18),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+        const Icon(
+          Icons.place,
+          color: Colors.red,
+          size: 30,
+        ),
+      ],
     );
   }
 }

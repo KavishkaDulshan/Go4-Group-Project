@@ -501,6 +501,94 @@ function toPlace(p) {
   };
 }
 
+function normalizeText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[_\-]/g, ' ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tokenize(value) {
+  const stopWords = new Set([
+    'the', 'and', 'for', 'with', 'from', 'shop', 'store', 'nearby', 'find',
+    'item', 'product', 'products', 'best', 'new', 'buy', 'to', 'of', 'in',
+  ]);
+  return normalizeText(value)
+    .split(' ')
+    .filter((t) => t.length > 2 && !stopWords.has(t));
+}
+
+function haversineMeters(lat1, lng1, lat2, lng2) {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(a));
+}
+
+function scorePlace(place, tokens) {
+  if (!tokens.length) return 1;
+
+  const name = normalizeText(place.name);
+  const address = normalizeText(place.address);
+  const types = normalizeText((place.types || []).join(' '));
+
+  let score = 0;
+  let matched = 0;
+  for (const token of tokens) {
+    const inName = name.includes(token);
+    const inTypes = types.includes(token);
+    const inAddress = address.includes(token);
+
+    if (inName || inTypes || inAddress) matched += 1;
+    if (inName) score += 3;
+    if (inTypes) score += 2;
+    if (inAddress) score += 1;
+  }
+
+  if (matched >= 2) score += 2;
+  if (place.rating && place.rating >= 4.2) score += 1;
+
+  return score;
+}
+
+function rankPlaces(places, { category, productName, lat, lng }) {
+  const tokens = tokenize(`${productName || ''} ${category || ''}`);
+  const hasLocation = Number.isFinite(lat) && Number.isFinite(lng);
+
+  const scored = places
+    .map((place) => {
+      const relevance = scorePlace(place, tokens);
+      const distance =
+        hasLocation && Number.isFinite(place.lat) && Number.isFinite(place.lng)
+          ? haversineMeters(lat, lng, place.lat, place.lng)
+          : Number.POSITIVE_INFINITY;
+      return { ...place, __relevance: relevance, __distance: distance };
+    });
+
+  const filtered = scored
+    .filter((place) => tokens.length === 0 || place.__relevance > 0)
+    .sort((a, b) => {
+      if (b.__relevance !== a.__relevance) return b.__relevance - a.__relevance;
+      if (a.__distance !== b.__distance) return a.__distance - b.__distance;
+      return (b.rating || 0) - (a.rating || 0);
+    });
+
+  const ranked = (filtered.length > 0 ? filtered : scored
+    .sort((a, b) => {
+      if (b.__relevance !== a.__relevance) return b.__relevance - a.__relevance;
+      if (a.__distance !== b.__distance) return a.__distance - b.__distance;
+      return (b.rating || 0) - (a.rating || 0);
+    }))
+    .map(({ __relevance, __distance, ...place }) => place);
+
+  return ranked;
+}
+
 // ── GET /nearby ───────────────────────────────────────────────────────────────
 /**
  * GET /api/v1/places/nearby
@@ -522,6 +610,8 @@ function toPlace(p) {
 router.get('/nearby', async (req, res, next) => {
   try {
     const { category = '', productName = '', lat, lng } = req.query;
+    const latNum = Number(lat);
+    const lngNum = Number(lng);
 
     if (!category && !productName) {
       return res.status(400).json({ error: 'Provide at least one of: category, productName' });
@@ -533,7 +623,7 @@ router.get('/nearby', async (req, res, next) => {
     }
 
     const strategies  = resolveStrategies(category, productName);
-    const hasLocation = Boolean(lat && lng);
+  const hasLocation = Number.isFinite(latNum) && Number.isFinite(lngNum);
     let   allPlaces   = [];
 
     for (const { type, keyword } of strategies) {
@@ -544,7 +634,7 @@ router.get('/nearby', async (req, res, next) => {
           // ── Nearby Search with type + rankby=distance ─────────────────────
           const { data } = await axios.get(NEARBY_URL, {
             params: {
-              location: `${lat},${lng}`,
+              location: `${latNum},${lngNum}`,
               rankby:   'distance',
               type,
               keyword,
@@ -592,7 +682,13 @@ router.get('/nearby', async (req, res, next) => {
       `[Places] Final: ${allPlaces.length} place(s) ` +
       `for category="${category}" product="${productName}"`
     );
-    return res.json({ places: allPlaces.slice(0, 20) });
+    const rankedPlaces = rankPlaces(allPlaces, {
+      category,
+      productName,
+      lat: latNum,
+      lng: lngNum,
+    });
+    return res.json({ places: rankedPlaces.slice(0, 20) });
 
   } catch (err) {
     next(err);
