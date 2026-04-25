@@ -26,10 +26,19 @@ router.post('/google', async (req, res, next) => {
     }
 
     // Verify the token with Google
-    const ticket = await client.verifyIdToken({
-      idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+    let ticket;
+    try {
+      ticket = await client.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+    } catch (verifyErr) {
+      const decoded = jwt.decode(idToken);
+      console.error(`[Auth] verifyIdToken failed: ${verifyErr.message}`);
+      console.error(`[Auth] Expected audience (GOOGLE_CLIENT_ID): ${process.env.GOOGLE_CLIENT_ID}`);
+      console.error(`[Auth] Actual token audience (aud): ${decoded?.aud}`);
+      throw verifyErr;
+    }
     const payload = ticket.getPayload();
 
     // Upsert user record
