@@ -28,6 +28,10 @@ dependencies:
   # Google Maps
   google_maps_flutter: ^2.9.0
 
+  # Keyless map renderer used on the map screen to avoid Google Maps SDK key issues
+  flutter_map: ^8.3.0
+  latlong2: ^0.9.1
+
   # Google Sign-In
   google_sign_in: ^6.2.1
 

@@ -2,7 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
@@ -18,8 +19,9 @@ class MapScreen extends ConsumerStatefulWidget {
 }
 
 class _MapScreenState extends ConsumerState<MapScreen> {
-  final Completer<GoogleMapController> _mapController = Completer();
+  final MapController _mapController = MapController();
   bool _locationDialogShown = false;
+  bool _mapReady = false;
 
   // Places state
   Set<Marker>                 _markers          = {};
@@ -29,8 +31,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cs = Theme.of(context).colorScheme;
     final locationAsync = ref.watch(locationProvider);
     final searchState   = ref.watch(searchProvider);
     final result        = searchState.result;
@@ -75,10 +75,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Widget _buildMap(BuildContext context, LatLng? position, dynamic result) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
-    final initialCamera = CameraPosition(
-      target: position ?? const LatLng(0, 0),
-      zoom: position != null ? 14 : 2,
-    );
 
     // Display label: show product name so user knows what they last searched
     final displayQuery = result?.tags.productName ?? result?.tags.searchQuery ?? '';
@@ -91,15 +87,48 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       body: Stack(
         children: [
           // ── Google Map fills screen ───────────────────────────────────────
-          GoogleMap(
-            initialCameraPosition: initialCamera,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
-            zoomControlsEnabled: false,
-            markers: _markers,
-            onMapCreated: (ctrl) {
-              if (!_mapController.isCompleted) _mapController.complete(ctrl);
-            },
+          Positioned.fill(
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: position ?? const LatLng(0, 0),
+                initialZoom: position != null ? 14 : 2,
+                onMapReady: () {
+                  if (!mounted) return;
+                  setState(() => _mapReady = true);
+                  if (_markers.isNotEmpty) {
+                    _fitMarkers();
+                  }
+                },
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.go4app.go4',
+                  maxZoom: 19,
+                ),
+                if (position != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: position,
+                        width: 36,
+                        height: 36,
+                        child: const Icon(
+                          Icons.my_location,
+                          color: Colors.blue,
+                          size: 24,
+                        ),
+                      ),
+                    ],
+                  ),
+                if (_markers.isNotEmpty)
+                  MarkerLayer(
+                    markers: _markers.toList(),
+                  ),
+              ],
+            ),
           ),
 
           // ── Back button overlay ───────────────────────────────────────────
@@ -265,14 +294,22 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         final lng = (p['lng'] as num?)?.toDouble();
         if (lat == null || lng == null) continue;
 
-        final id = MarkerId(p['placeId'] as String? ?? '$lat,$lng');
         newMarkers.add(
           Marker(
-            markerId: id,
-            position: LatLng(lat, lng),
-            infoWindow: InfoWindow(
-              title: p['name'] as String? ?? 'Store',
-              snippet: p['address'] as String? ?? '',
+            point: LatLng(lat, lng),
+            width: 42,
+            height: 42,
+            child: Tooltip(
+              message: [
+                p['name'] as String? ?? 'Store',
+                if ((p['address'] as String?)?.isNotEmpty ?? false)
+                  p['address'] as String,
+              ].whereType<String>().join('\n'),
+              child: const Icon(
+                Icons.place,
+                color: Colors.red,
+                size: 34,
+              ),
             ),
           ),
         );
@@ -286,28 +323,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           _isLoadingPlaces = false;
         });
 
-        // Zoom to fit all markers if we found any
-        if (newMarkers.isNotEmpty && _mapController.isCompleted) {
-          final ctrl = await _mapController.future;
-          if (newMarkers.length == 1) {
-            ctrl.animateCamera(
-              CameraUpdate.newLatLngZoom(newMarkers.first.position, 15),
-            );
-          } else {
-            final lats = newMarkers.map((m) => m.position.latitude);
-            final lngs = newMarkers.map((m) => m.position.longitude);
-            ctrl.animateCamera(
-              CameraUpdate.newLatLngBounds(
-                LatLngBounds(
-                  southwest: LatLng(lats.reduce((a, b) => a < b ? a : b),
-                      lngs.reduce((a, b) => a < b ? a : b)),
-                  northeast: LatLng(lats.reduce((a, b) => a > b ? a : b),
-                      lngs.reduce((a, b) => a > b ? a : b)),
-                ),
-                80,
-              ),
-            );
-          }
+        // Zoom to fit all markers if we found any.
+        if (newMarkers.isNotEmpty && _mapReady) {
+          _fitMarkers();
         }
       }
     } catch (e) {
@@ -318,6 +336,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         );
       }
     }
+  }
+
+  void _fitMarkers() {
+    if (!_mapReady || _markers.isEmpty) return;
+
+    final points = _markers.map((marker) => marker.point).toList();
+    if (points.length == 1) {
+      _mapController.move(points.first, 15);
+      return;
+    }
+
+    _mapController.fitCamera(
+      CameraFit.bounds(
+        bounds: LatLngBounds.fromPoints(points),
+        padding: const EdgeInsets.all(80),
+        maxZoom: 16,
+      ),
+    );
   }
 
   // ── Directions ─────────────────────────────────────────────────────────────
