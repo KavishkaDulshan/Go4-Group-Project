@@ -9,7 +9,6 @@ import '../../models/search_result.dart';
 /// Base URL strategy:
 ///   - Physical device via USB   → http://localhost:5000  (adb reverse tcp:5000 tcp:5000) ← active
 ///   - Android emulator          → http://10.0.2.2:5000   (emulator alias for host)
-///   - Azure VM (prod)           → http://20.235.241.126  (Docker port 80 → Node :3000)
 // const String _deviceBase      = 'http://localhost:5000';   // USB + adb reverse  ← active
 // const String _emulatorBase = 'http://10.0.2.2:5000';   // Android emulator (local)
 const String _azureBase    = 'http://20.244.10.53:5000';  // Azure VM (production)
