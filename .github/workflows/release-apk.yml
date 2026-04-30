@@ -2,8 +2,9 @@ name: Build and Publish Android APK
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -35,7 +36,16 @@ jobs:
         working-directory: frontend
         run: flutter build apk --release
 
+      - name: Verify APK output exists
+        shell: bash
+        run: test -f frontend/build/app/outputs/flutter-apk/app-release.apk
+
       - name: Publish APK to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: apk-latest
+          name: APK latest build
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          overwrite_files: true
           files: frontend/build/app/outputs/flutter-apk/app-release.apk
